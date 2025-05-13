@@ -77,16 +77,16 @@ For instance, supplying the correct password for the *Sources* folder reveals it
 │   ├── 📄 Report_on_Government_Corruption_1.pdf
 │   └── 📄 Report_on_Forced_Disappearances.pdf
 └── *📁 Evidence
-│   ├── 📄 Surveillance_Logs.pdf
-│   └── 📄 Leaked_Emails_Chain.pdf
+    ├── 📄 Surveillance_Logs.pdf
+    └── 📄 Leaked_Emails_Chain.pdf
 ```
 However, if the duress password is entered instead, only non-hidden contents become visible. This restricted visibility is recursively enforced: any hidden subdirectory nested within a directory accessed via duress credentials will also remain inaccessible and invisible. In the above example, entering the duress password for *Sources* would yield:
 
 ```
 📁 Sources
 ├── 📁 Interviews
-│   ├── 📄 Interview_with_Activist_1.mp3
-│   └── 📄 Interview_with_Political_Dissident_2.docx
+   ├── 📄 Interview_with_Activist_1.mp3
+   └── 📄 Interview_with_Political_Dissident_2.docx
 ```
 Clarifying Remarks
 * **Absence of Explicit Credential Mappings**: The system does not rely on a password-folder mapping stored in plaintext or encrypted form. Rather, access is derived cryptographically, and no information about the directory structure is available without successfully decrypting a given folder. Consequently, the raw data contains no metadata that could be used to infer folder relationships.
