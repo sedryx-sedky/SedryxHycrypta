@@ -8,27 +8,27 @@
 
 Consider the case of Alice, a high-risk individual—such as a journalist operating under a repressive regime—who requires a robust and trustworthy means of securely storing sensitive data. She consults her technically adept associate, Bob, with a request to design an encrypted file management system satisfying a stringent set of requirements:
 
-* All file contents must be encrypted using strong, contemporary cryptographic primitives.
-* The system must prevent metadata leakage; internal directory structures, filenames, and access patterns must be encrypted or otherwise obfuscated.
-* It must support the use of duress passwords, which prevent access to select subsets of data.
-* Real and duress credentials must be indistinguishable, both to external observers and the system itself.
-* Folder-level encryption must be supported through independent password-derived keys, enabling compartmentalized access without reliance on a single master password—facilitating collaboration or emergency data sharing.
+* *Encryption*: All data must be encrypted.
+* *No metadata leaks*: The system must prevent metadata leakage; internal directory structures, filenames, and access patterns must be encrypted or otherwise obfuscated.
+* *Duress passwords*: It must support the use of duress passwords, which prevent access to select subsets of data.
+* *Plausible deniability*: Real and duress credentials must be indistinguishable, both to external observers and the system itself.
+* *Searchable encrypted folders*: Folder-level encryption must be supported through independent password-derived keys, enabling compartmentalized access without reliance on a single master password—facilitating collaboration or emergency data sharing.
 * It must be assumed that an adversary has full access to the device and its stored data. The security of the system must rely exclusively on secrets not stored on the device itself.
 
 In the following, I outline a system architecture designed to meet the specified criteria. My aim with this paper was to design and articulate a coherent model grounded in practical and adversarial threat assumptions. The design emerged from a playful exploration of cryptographic techniques and is intended as an intellectual exercise rather than a proposal for a deployable real-world system. At the time of writing, I am a master's student in mathematics.
 
 *Note: The language in this document has been polished with the assistance of ChatGPT to improve clarity and formality.*
 
-Cryptographic Primitives
+## Cryptographic Primitives
 The system assumes the availability of the following secure primitives:
 
-Symmetric Encryption $\mathbb{E}_K[\mathrm{data}]$: A CPA-secure, preferably authenticated encryption scheme (e.g., AES-GCM, XChaCha20-Poly1305).
+* Symmetric Encryption $\mathbb{E}_K[\mathrm{data}]$: A CPA-secure, preferably authenticated encryption scheme (e.g., AES-GCM, XChaCha20-Poly1305).
 
-Hash Function $\mathrm{hash}$: A collision-resistant function used for integrity, lookup obfuscation, and key derivation.
+* Hash Function $\mathrm{hash}$: A collision-resistant function used for integrity, lookup obfuscation, and key derivation.
 
-Key Derivation Function $\mathrm{KDF}(p,\mathrm{salt})$: A memory-hard function (e.g., Argon2) that derives high-entropy keys from low-entropy secrets.
+* Key Derivation Function $\mathrm{KDF}(p,\mathrm{salt})$: A memory-hard function (e.g., Argon2) that derives high-entropy keys from low-entropy secrets.
 
-Random Number Generator $\mathrm{random}()$: A cryptographically secure generator for keys, salts, and nonces.
+* Random Number Generator $\mathrm{random}()$: A cryptographically secure generator for keys, salts, and nonces.
 
 ## How the System Works for Users
 Users may create customized directory hierarchies, with optional hidden folders designated by prefixing their names with an asterisk (`*`). As an example, Alice might organize her files as follows:
