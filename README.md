@@ -84,7 +84,7 @@ However, if the duress password is entered instead, only non-hidden contents bec
 
 ```
 📁 Sources
-├── 📁 Interviews
+└── 📁 Interviews
    ├── 📄 Interview_with_Activist_1.mp3
    └── 📄 Interview_with_Political_Dissident_2.docx
 ```
