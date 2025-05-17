@@ -1,38 +1,49 @@
 # Sedryx Hycrypta
 
-*A secure encrypted file manager with duress passwords and a searchable, encrypted directory structure*
+*Encrypted file manager • Duress passwords • Direct folder access with no structural leaks*
 
 ---
 
 ## Abstract
+In this README, I present a cryptographically secure file-management design that assumes an adversary with full access to all stored data. My goal is to describe a coherent model grounded in realistic threat assumptions. This work is an intellectual exercise—emerging from my own exploration of cryptographic techniques—and is not a ready-for-production proposal.
 
-Consider the case of Alice, a high-risk individual—such as a journalist operating under a repressive regime—who requires a robust and trustworthy means of securely storing sensitive data. She consults her technically adept associate, Bob, with a request to design an encrypted file management system satisfying a stringent set of requirements:
+I’m currently a mathematics master’s student with no formal cryptography training, so I welcome any feedback or corrections. If any of these ideas mirror existing research, I assure you it was unintentional—I deliberately avoided surveying the literature until after drafting this design. My only “collaborator” was ChatGPT for polishing the prose.
 
-* **Encryption**: All data must be encrypted.
-* **No metadata leaks**: The system must prevent metadata leakage; internal directory structures, filenames, and access patterns must be encrypted or otherwise obfuscated.
-* **Duress passwords**: It must support the use of duress passwords, which prevent access to select subsets of data.
-* **Plausible deniability**: Real and duress credentials must be indistinguishable, both to external observers and the system itself.
-* **Searchable encrypted folders**: Folder-level encryption must be supported through independent password-derived keys, enabling compartmentalized access without reliance on a single master password—facilitating collaboration or emergency data sharing.
-* **Storage medium compromised**: It must be assumed that an adversary has full access to the device and its stored data. The security of the system must rely exclusively on secrets not stored on the device itself.
+## Motivation
+Consider the case of Alice, a high-risk individual—such as a journalist operating under an authoritarian regime—who requires a secure and reliable mechanism for storing highly sensitive information. To meet her stringent security needs, she turns to her technically proficient associate, Bob, with a request to design a system that satisfies the following set of rigorous requirements:
 
-In the following, I outline a system architecture designed to meet the specified criteria. My aim with this paper was to design and articulate a coherent model grounded in practical and adversarial threat assumptions. The design emerged from a playful exploration of cryptographic techniques and is intended as an intellectual exercise rather than a proposal for a deployable real-world system. At the time of writing, I am a master's student in mathematics.
+* **Encryption**: All data stored within the system must be encrypted.
 
-*Note: The language in this document has been polished with the assistance of ChatGPT to improve clarity and formality.*
+* **Metadata obfuscation**: Directory hierarchies, file names, access patterns, and all related metadata must be effectively concealed.
+
+* **Password-derived keys**: Access to encrypted data must rely exclusively on keys derived from user-provided passwords. Without knowledge uniquely held by Alice, it should be cryptographically infeasible to extract any information from the storage medium.
+
+* **Alternative credentials**: The system must support the use of alternate passwords, each granting access only to a restricted subset of the data. This enables Alice to divulge a decoy password under coercion, thereby protecting more sensitive information.
+
+* **Plausible deniability**: The system must ensure that alternative credentials are indistinguishable from one another—both to an external adversary and to the system itself—thus preserving deniability about the existence of hidden data.
+
+* **Folder-level access control**: The system should allow individual folders to be protected by their own passwords, enabling direct access to specific folders without requiring traversal of the entire directory structure or knowledge of the master password. This must be achieved without revealing any information about the overall structure of the file system.
 
 ## Cryptographic Primitives
-The system assumes the availability of the following secure primitives:
+The system relies on the availability of the following cryptographic primitives:
 
-* Symmetric Encryption $\mathbb{E}_K[\mathrm{data}]$: A CPA-secure, preferably authenticated encryption scheme (e.g., AES-GCM, XChaCha20-Poly1305).
+* *Symmetric Encryption*: $\mathbb{E}_K[\mathrm{data}]$
+A symmetric encryption scheme, preferably with built-in authentication (e.g., AEAD). This serves as the primary mechanism for encrypting data throughout the system.
 
-* Hash Function $\mathrm{hash}$: A collision-resistant function used for integrity, lookup obfuscation, and key derivation.
+* *Asymmetric Encryption*: $\mathbf{A}_K[\mathrm{data}]$
+An asymmetric encryption scheme, employed primarily to enable support for dual-access credentials and secure key distribution.
 
-* Key Derivation Function $\mathrm{KDF}(p,\mathrm{salt})$: A memory-hard function (e.g., Argon2) that derives high-entropy keys from low-entropy secrets.
+* *Hash Function*: $\mathrm{hash}(\mathrm{data}, \mathrm{salt})$
+A collision-resistant hash function, used for purposes such as ensuring data integrity, obfuscating lookup structures, and contributing to key derivation.
 
-* Random Number Generator $\mathrm{random}()$: A cryptographically secure generator for keys, salts, and nonces.
+* *Key Derivation Function*: $\mathrm{KDF}(\mathrm{password}, \mathrm{salt})$
+A memory-hard key derivation function—such as Argon2—used to transform low-entropy secrets (e.g., user passwords) into high-entropy cryptographic keys.
+
+* *Cryptographically Secure Random Number Generator*: $\mathrm{random}(n)$
+A secure source of randomness for generating cryptographic materials including keys, salts, and nonces.
 
 ## How the System Works for Users
-
-The system enables users to create custom directory hierarchies with robust, dual-mode access control. For illustration, consider the following example structure created by Alice. Some folders are marked with `*` or `!``, which we will explain shortly:
+The system allows users to construct custom directory hierarchies with strong, dual-mode access control. To illustrate its functionality, consider the following example hierarchy created by Alice. Some folders are annotated with `*` or `!`, which will be explained shortly:
 
 ```
 📁 Root
@@ -74,17 +85,23 @@ The system enables users to create custom directory hierarchies with robust, dua
 │       ├── 🔈 Interview_Clip.mp4
 │       └── 🔈 Protest_Footage.mp4
 ```
-Each folder in the system supports two access modes: primary and duress. Within a directory there exist a set of subfolders and files that are said to be shared, allowing read and write operations by both modes. Additionaly, however, each mode posses their own hidden subdirectories, inaccassible to the other mode. In the example above, folders marked with `*` are visible only in the primary mode, and those marked with `!` are visible only in the duress mode.
+Each folder supports two access modes: primary and duress. Subfolders and files within a directory may be either:
 
-Access modes are recursively enforced: once a directory is accessed in a given mode, all its descendants are automatically interpreted in the same mode. This prevents mode escalation and ensures mode isolation within any given subtree.
+* **Shared**: accessible in both modes,
 
-Each folder may be protected with two passwords: a primary password and a duress password. Entering a password grants access to the folder in the corresponding mode. Crucially, passwords work independently of the parent folder's state, meaning a user can unlock and access a deeply nested folder directly, even if its ancestors remain locked or hidden. This decoupling allows granular sharing of specific folders without revealing the broader structure.
+* **Primary-only**: accessible exclusively in primary mode (`*`),
 
-Moreover, the system is designed to prevent metadata leakage. The existence of folders that have not been unlocked remains undiscoverable, protecting against both inference attacks and accidental disclosure under coercion.
+* **Duress-only**: accessible exclusively in duress mode (`!`).
+
+Access modes are recursively enforced. Once a folder is opened in a particular mode, all its descendants are interpreted under the same mode. This prevents escalation or leakage between modes and guarantees complete isolation of access contexts.
+
+Each folder can be protected by two independent passwords: a primary password and a duress password. Entering either grants access in the corresponding mode. Crucially, access is non-hierarchical—a folder can be unlocked directly without requiring decryption or knowledge of its parent directories. This decoupled access model enables secure and granular sharing of individual subdirectories without exposing the broader structure.
+
+Furthermore, the system is designed to eliminate metadata leakage. The existence of any folder not explicitly unlocked remains completely undiscoverable. Neither adversaries nor coerced users can infer the presence of hidden content.
 
 ### Example Scenarios
 1. #### Accessing the Root with the Primary Password
-Reveals all shared content and the primary-only directories:
+Reveals shared content and primary-mode folders:
 
 ```
 📁 Root
@@ -102,7 +119,7 @@ Reveals all shared content and the primary-only directories:
 ```
 
 2. #### Accessing the Root with the Duress Password
-Displays shared content and the duress-only directories:
+Reveals shared content and duress-mode folders:
 
 ```
 📁 Root
@@ -116,8 +133,8 @@ Displays shared content and the duress-only directories:
 │   └── 📁 Media_Tips
 ```
 
-3. #### Accessing a Specific Folder Directly
-For instance, entering the primary password for the *Sources* folder (without unlocking *Root*) reveals only the primary-mode content of that folder and its subdirectories:
+3. #### Direct Access to a Specific Folder
+Entering the primary password for the *Sources* folder—without unlocking the root—reveals only the primary content of that folder:
 
 ```
 📁 Sources
@@ -125,13 +142,66 @@ For instance, entering the primary password for the *Sources* folder (without un
 ├── *📁 Whistleblower_Reports
 └── *📁 Evidence
 ```
-This model allows Alice to selectively share specific folders (such as *Sources*) with collaborators, using a designated password, without revealing the rest of her directory structure or inadvertently granting access to sensitive materials stored elsewhere.
+This enables users like Alice to securely share individual folders (e.g., *Sources*) with collaborators via a designated password, without revealing unrelated or more sensitive parts of the file system.
+
 
 Clarifying Remarks
-* *Absence of Credential Mapping Metadata*: The system stores no mappings between passwords and folders, in plaintext or encrypted form. Folder access is derived solely through decryption, and without a valid password, no structural or identifying information is revealed. Encrypted data appears indistinguishable from random noise.
+* **Absence of Credential Mapping Metadata**:
+The system does not store any explicit mapping between passwords and folders, whether in plaintext or encrypted form. Folder discovery is purely decryption-based: without a valid password, no structural, semantic, or identifying information is revealed. Encrypted data is indistinguishable from random bytes.
 
-* *Undetectability of Duress Passwords*: The system cannot distinguish between primary and duress credentials. All password-derived keys are treated equally, and hidden folders under duress access appear identical to regular ones. There are no markers or flags; the `*` and `!` prefix is purely illustrative our examples.
+* **Undetectability of Duress Passwords**:
+The system cannot distinguish between primary and duress credentials. All password-derived keys are processed uniformly. Hidden directories in duress mode appear identical to any other folder, and there are no internal indicators to suggest the presence of an alternate access mode. The * and ! annotations are merely explanatory for this example.
 
-* *Structural Obfuscation as a Security Goal*: The system prevents inference of folder structure even under full storage compromise. Without decryption keys, no information about a folder's position—root, intermediate, or leaf—is revealed. The system ensures asymmetric visibility: users may enumerate contents below any folder they can decrypt, but not above.
+* **Structural Obfuscation as a Security Principle**:
+Even in the event of complete storage compromise, the system discloses no information about the directory structure. Without valid decryption keys, it is impossible to infer a folder’s position in the hierarchy—whether root, intermediate, or leaf. Access is asymmetrically visible: users may traverse downward from any folder they can decrypt, but cannot infer the existence or layout of ancestor or sibling folders.
 
-The technical mechanisms used to enforce these guarantees—such as key derivation, encrypted index resolution, and forward-secure path construction—are detailed in the next sections.
+## High level overview
+#### Lookup Architecture
+To allow for efficient and selective lookups while preserving secrecy about the directory structure, the system employs lookup tables of the form:
+
+$$\{\mathrm{hash}(\mathrm{key}, \mathrm{salt}): \mathbb{E}_{\mathrm{key}}[\mathrm{data}]\}$$
+This should enable selective decryption while disallowing inference about inaccessible elements. Only with the correct key can one discover the presence and location of the corresponding data.
+
+#### Folders Attributes
+Each folder has the following attributes, each unique to it
+
+* Keys
+- *Primary Keys* $(p, P)$: A public–private key pair responsible for the primary access mode.
+- *Duress Keys* $(d, D)$: A public–private key pair responsible for the duress access mode.
+- *Shared Key* $S$: An encryption key used by both access modes to store shared metadata.
+- *Data Encryption Key* $E$: Used to encrypt files inside the folder.
+
+* Salts
+- *Child Salt* $cs$: Used for lookups to locate children of the folder (i.e., subfolders).
+- *File Salt* $fs$: Used for lookups to locate files directly under the folder.
+- *Password Salt* $ps$: Used during password derivation; each folder has a unique value.
+- *Key Salt* $ks$: Used in lookups that locate other keys (e.g., stored child keys).
+
+#### Key Structure?
+The system is fundamentally built on recursive key-to-key encryption: keys are used to encrypt other keys, which in turn encrypt further keys, and so on. This is the backbone of both metadata obfuscation and strict access mode separation.
+
+The lookup structure ensures that only valid keys can discover and decrypt the data they are authorized to access. This is also how access mode boundaries are cryptographically enforced: for example, the primary mode cannot reveal information exclusive to the duress mode and vice versa.
+
+Suppose a user is inside a directory and wishes to create a new folder. We’ll denote the parent folder's attributes in **bold** and the child’s in regular font. When creating the folder, the user can choose to make it either:
+
+* **Shared** (visible in both access modes), or
+
+* **Hidden** (visible only in the current access mode).
+
+This decision determines which keys will be used to store and later retrieve the child folder. The key hierarchy follows the structure illustrated below. Each arrow denotes that the key below can derive the key above, and edge labels show which salt is involved in the lookup.
+
+Let:
+* $P_p$: Primary password of the child folder.
+* $P_d$: Duress password of the child folder.
+* $K_p$, $K_d$: Keys derived from $P_p$ and $P_d$ respectively via a KDF and the salt $ps$.
+
+[Insert proper graph graphic]
+[
+bold(p) ->{ks} ->
+Pp ->{KDF, ps} -> Kp ->
+                         S ->{ks} E
+Pd ->{KDF, ps} -> Kd ->
+bold{d} ->{ks} ->
+]
+
+This makes the recursive nature of access control clear. For example, the primary key of the parent folder ($\mathbf{p}$) can only derive the primary password of the child, and hence only the primary child keys. It cannot access the duress keys or any data protected solely under them — making escalation between modes cryptographically impossible.
