@@ -155,7 +155,7 @@ The system cannot distinguish between primary and duress credentials. All passwo
 * **Structural Obfuscation as a Security Principle**:
 Even in the event of complete storage compromise, the system discloses no information about the directory structure. Without valid decryption keys, it is impossible to infer a folder’s position in the hierarchy—whether root, intermediate, or leaf. Access is asymmetrically visible: users may traverse downward from any folder they can decrypt, but cannot infer the existence or layout of ancestor or sibling folders.
 
-## High level overview
+## System Overview
 #### Lookup Architecture
 To allow for efficient and selective lookups while preserving secrecy about the directory structure, the system employs lookup tables of the form:
 
@@ -177,7 +177,7 @@ Each folder has the following attributes, each unique to it
 - *Password Salt* $ps$: Used during password derivation; each folder has a unique value.
 - *Key Salt* $ks$: Used in lookups that locate other keys (e.g., stored child keys).
 
-#### Key Structure?
+#### Key Structure
 The system is fundamentally built on recursive key-to-key encryption: keys are used to encrypt other keys, which in turn encrypt further keys, and so on. This is the backbone of both metadata obfuscation and strict access mode separation.
 
 The lookup structure ensures that only valid keys can discover and decrypt the data they are authorized to access. This is also how access mode boundaries are cryptographically enforced: for example, the primary mode cannot reveal information exclusive to the duress mode and vice versa.
@@ -205,3 +205,127 @@ bold{d} ->{ks} ->
 ]
 
 This makes the recursive nature of access control clear. For example, the primary key of the parent folder ($\mathbf{p}$) can only derive the primary password of the child, and hence only the primary child keys. It cannot access the duress keys or any data protected solely under them — making escalation between modes cryptographically impossible.
+
+#### Directory Storage
+Folders securely maintain references to their children while attempting to minimize metadata leakage. Any element intended to be accessible in both modes is encrypted using the shared key $S$.
+Each child is stored in a lookup table as an entry of the form: $$\{\mathrm{hash}(S, \mathrm{salt}): \mathbb{E}_{S}[\mathrm{child_id}]\}$$
+Where $\mathrm{salt}$ is either the `child_salt` or `file_salt` depending on whether the child is a folder or file. Thus, only possession of the correct shared key allows traversal to these shared children. Private (mode-specific) children would instead be stored under the corresponding mode’s key.
+
+#### Password Access
+When the program is initialized, the user is prompted for a password. Based on the password entered, the system attempts to open the root folder associated with it — without knowing anything about the underlying directory structure or access mode.
+
+Here is how this process works:
+
+1. The user is prompted to enter a password $P$.
+
+2. A global salt $s$ (randomly generated when the vault is first created) is used to derive a candidate root key: $r := \mathrm{KDF}(P, s)$.
+
+3. A global lookup table of the form $\{\mathrm{hash}(r) : \mathbb{E}_{r}[ps]\}$ is consulted. This table is stored with the vault metadata and allows the system to discover root folders corresponding to different passwords without revealing the folder structure.
+
+4. If a match is found, the program uses $r$ to decrypt the entry and obtain $ps$, the password salt for the folder.
+
+5. The true folder key is then derived as $K := \mathrm{KDF}(P, ps)$, which may be either a primary or duress key — the system cannot tell.
+
+6. The folder and all of its descendants may now be accessed using $K$.
+
+## Implementation
+### Storage Backend
+While the system is designed to remain agnostic to the underlying storage mechanism, a relational database such as SQLite is particularly well-suited for this application due to its simplicity, efficiency, and widespread availability. The schema below defines how the system persists encrypted folder metadata, file data, and access-control lookup entries. All cryptographic operations are performed externally to the database, which stores only encrypted or hashed values.
+
+Two separate SQLite databases are required: one primary database that stores all persistent operational data, and a secondary database used during initialization to manage user password prompts and authentication. Both databases are permanent and persist data across sessions, but they serve distinct functions within the system.
+
+#### Database Schema
+##### `folder` Table
+| Column          | Type    | Description                                                             |
+| --------------- | ------- | ----------------------------------------------------------------------- |
+| `id`            | INTEGER | Unique identifier for the folder                                        |
+| `name`          | BLOB    | Encrypted folder name using the shared key $S$                          |
+| `password_salt` | BLOB    | Encrypted password salt using $S$                                       |
+| `file_salt`     | BLOB    | Encrypted salt for file lookups using $S$                               |
+| `child_salt`    | BLOB    | Encrypted salt for child lookups using $S$                              |
+| `key_salt`      | BLOB    | Public salt used in key lookups (unencrypted)                           |
+| `key1`          | BLOB    | Public key for either the primary or duress mode (unencrypted)          |
+| `key2`          | BLOB    | Public key for the complementary mode (duress or primary) (unencrypted) |
+
+*Note: Whether `key1` is primary or duress is not recorded explicitly. The distinction is only meaningful once the corresponding private key is derived from a password.*
+
+##### `file` Table
+| Column      | Type    | Description                                           |
+| ----------- | ------- | ------------------------------------------------------|
+| `id`        | INTEGER | Unique identifier for the file                        |
+| `name`      | BLOB    | Encrypted file name using the data encryption key $E$ |
+| `extension` | BLOB    | Encrypted file extension using $E$                    |
+| `contents`  | BLOB    | Encrypted file contents using $E$                     |
+
+
+##### `key_lookup` Table
+| Column | Type | Description                                       |
+| ------ | ---- | ------------------------------------------------- |
+| `hash` | BLOB | Hashed key used for lookup                        |
+| `key`  | BLOB | Encrypted key blob                                |
+
+
+##### `child_lookup` Table
+| Column     | Type | Description                          |
+| ---------- | ---- | -------------------------------------|
+| `hash`     | BLOB | Hashed index for child folder lookup |
+| `child_id` | BLOB | Encrypted folder ID                  |
+
+##### `file_lookup` Table
+| Column    | Type | Description                  |
+| --------- | ---- | -----------------------------|
+| `hash`    | BLOB | Hashed index for file lookup |
+| `file_id` | BLOB | Encrypted file ID using $S$  |
+
+### Folder Creation
+To implement the key-chaining mechanism described earlier, the following table entries are added when a new folder is created. Let $\mathbf{k}$ denote either $\mathbf{p}$ (primary), $\mathbf{d}$ (duress), or $\mathbf{S}$ (shared key), depending on the parent's current access mode and the visibility configuration of the new folder.
+
+1. `folder`
+| `id` | `name`                                  | `password_salt` | `file_salt` | `child_salt` | `key1` | `key2` |
+| ---- | --------------------------------------- | --------------- | ----------- | ------------ | ------ | ------ |
+| ...  | $\mathbb{E}\_S\[\text{folder\_name}]$ | $ps$          | $fs$      | $cs$       | $p$  | $d$  |
+
+
+2. `child_lookup`
+| `hash`                                     | `child_id`     |
+| ------------------------------------------ | -------------- |
+| $\mathrm{hash}(\mathbf{k}, \mathbf{cs})$ | (encrypted ID) |
+
+3. `key_lookup`
+| `hash`                            | `key`                            |
+| --------------------------------- | -------------------------------- |
+| $\mathrm{hash}(p, ks)$          | $\mathbb{E}\_p\[S]$            |
+| $\mathrm{hash}(d, ks)$          | $\mathbb{E}\_d\[S]$            |
+| $\mathrm{hash}(S, ks)$          | $\mathbb{E}\_S\[E]$            |
+| $\mathrm{hash}(\mathbf{p}, ks)$ | $\mathbb{E}\_{\mathbf{p}}\[p]$ |
+| $\mathrm{hash}(\mathbf{d}, ks)$ | $\mathbb{E}\_{\mathbf{d}}\[d]$ |
+
+## Initialization Database
+To securely manage user authentication and facilitate folder access without prior knowledge of the directory structure, the system employs a dedicated initialization database. This database persists essential metadata and a lookup table to verify passwords and retrieve corresponding folder salts during startup.
+
+### Database Schema
+1. `meta` Table
+| Column  | Type | Description                                               |
+| ------- | ---- | --------------------------------------------------------- |
+| `key`   | TEXT | Identifier for the metadata entry (e.g., `global_salt`) |
+| `value` | BLOB | Corresponding data stored unencrypted (e.g., `global salt`) |
+
+* Stores critical global parameters such as the public global salt $s$ used in key derivation.
+
+2. `password_lookup` Table
+
+| Column          | Type | Description                                                |
+| --------------- | ---- | ---------------------------------------------------------- |
+| `hash`          | BLOB | Hash of the derived key `r := KDF(password, s)`            |
+| `password_salt` | BLOB | Encrypted folder-specific password salt `\mathbb{E}_r[ps]` |
+
+* Maps the hash of the key derived from the user’s input password combined with the global salt to the encrypted folder-specific password salt.
+
+* Enables the system to verify password correctness and derive further keys without exposing directory structure details.
+
+## Potential Applications
+### Denaiable Messaging
+The system could underpin a secure messaging platform where each message is stored as a file in a root folder. Both communicating devices would be provisioned with the primary and duress credentials. Messages exchanged under duress are stored as normal files, while more sensitive messages can be encrypted under the primary key. If coerced, users can reveal only the duress password, leaving no cryptographic evidence of a second conversation. Additional cover traffic and randomized padding can be employed to obscure the existence of hidden data entirely.
+
+### Secure Colloboration
+This configuration emphasizes access control rather than strict secrecy. Suppose two users, Eve and Olivia, collaborate on a shared project using a third-party cloud service. By configuring the server with this system, each user can maintain private encrypted folders and share selected folders with their counterpart. Access is managed entirely through cryptography; the server itself never knows which folders are shared or private, nor does it need to enforce permissions. All access control is client-driven and cryptographically guaranteed.
