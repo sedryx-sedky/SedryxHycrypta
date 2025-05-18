@@ -281,9 +281,9 @@ Two separate SQLite databases are required: one primary database that stores all
 To implement the key-chaining mechanism described earlier, the following table entries are added when a new folder is created. Let $\mathbf{k}$ denote either $\mathbf{p}$ (primary), $\mathbf{d}$ (duress), or $\mathbf{S}$ (shared key), depending on the parent's current access mode and the visibility configuration of the new folder.
 
 1. `folder`
-| `id` | `name`                                  | `password_salt` | `file_salt` | `child_salt` | `key1` | `key2` |
-| ---- | --------------------------------------- | --------------- | ----------- | ------------ | ------ | ------ |
-| ...  | $\mathbb{E}_S\[\mathrm{folder_name}]$ | $ps$          | $fs$      | $cs$       | $p$  | $d$  |
+| `id` | `name`  | `password_salt` | `file_salt` | `child_salt` | `key1` | `key2` |
+| ---- | ----------- | --------------- | ----------- | ------------ | ------ | ------ |
+| ...  | $\mathbb{E}_S[\mathrm{folder_name}]$ | $ps$          | $fs$      | $cs$       | $p$  | $d$  |
 
 
 2. `child_lookup`
@@ -294,11 +294,11 @@ To implement the key-chaining mechanism described earlier, the following table e
 3. `key_lookup`
 | `hash`                            | `key`                            |
 | --------------------------------- | -------------------------------- |
-| $\mathrm{hash}(p, ks)$          | $\mathbb{E}\_p\[S]$            |
-| $\mathrm{hash}(d, ks)$          | $\mathbb{E}\_d\[S]$            |
-| $\mathrm{hash}(S, ks)$          | $\mathbb{E}\_S\[E]$            |
-| $\mathrm{hash}(\mathbf{p}, ks)$ | $\mathbb{E}\_{\mathbf{p}}\[p]$ |
-| $\mathrm{hash}(\mathbf{d}, ks)$ | $\mathbb{E}\_{\mathbf{d}}\[d]$ |
+| $\mathrm{hash}(p, ks)$          | $\mathbb{E}_p[S]$            |
+| $\mathrm{hash}(d, ks)$          | $\mathbb{E}_d[S]$            |
+| $\mathrm{hash}(S, ks)$          | $\mathbb{E}_S[E]$            |
+| $\mathrm{hash}(\mathbf{p}, ks)$ | $\mathbb{E}_{\mathbf{p}}[p]$ |
+| $\mathrm{hash}(\mathbf{d}, ks)$ | $\mathbb{E}_{\mathbf{d}}[d]$ |
 
 ## Initialization Database
 To securely manage user authentication and facilitate folder access without prior knowledge of the directory structure, the system employs a dedicated initialization database. This database persists essential metadata and a lookup table to verify passwords and retrieve corresponding folder salts during startup.
