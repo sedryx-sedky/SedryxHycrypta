@@ -284,24 +284,24 @@ To implement the key-chaining mechanism described earlier, the following table e
 
 | `id` | `name` | `password_salt` | `file_salt` | `child_salt` | `key1` | `key2` |
 | ---- | ------ | --------------- | ----------- | ----------| ------ | ---- |
-| 42   | $\mathbb{E}_S[\mathrm{folder name}]$ | $ps$  | $fs$      | $cs$   | $p$  | $d$  |
+| 42   | $\mathbb{E}_S[\mathrm{folder\ name}]$ | $ps$  | $fs$      | $cs$   | $p$  | $d$  |
 
 
 2. `child_lookup`
 
 | `hash`                                     | `child_id`     |
 | ---------------------- | -------------- |
-| $\mathrm{hash}(\mathbf{k}, \mathbf{cs})$ | $\mathbf{E}_{\mathbf{k}}[\mathrm{child ID}]$ |
+| $\mathrm{hash}(\mathbf{k}, \mathbf{cs})$ | $\mathbf{E}_{\mathbf{k}}[\mathrm{child\ ID}]$ |
 
 3. `key_lookup`
 
 | `hash`                            | `key`                            |
 | --------------------------------- | -------------------------------- |
-| $\mathrm{hash}(p, ks)$          | $\mathbb{E}_p[S]$            |
-| $\mathrm{hash}(d, ks)$          | $\mathbb{E}_d[S]$            |
+| $\mathrm{hash}(p, ks)$          | $\mathbf{E}_p[S]$            |
+| $\mathrm{hash}(d, ks)$          | $\mathbf{E}_d[S]$            |
 | $\mathrm{hash}(S, ks)$          | $\mathbb{E}_S[E]$            |
-| $\mathrm{hash}(\mathbf{p}, ks)$ | $\mathbb{E}_{\mathbf{p}}[p]$ |
-| $\mathrm{hash}(\mathbf{d}, ks)$ | $\mathbb{E}_{\mathbf{d}}[d]$ |
+| $\mathrm{hash}(\mathbf{p}, ks)$ | $\mathbf{E}_{\mathbf{p}}[p]$ |
+| $\mathrm{hash}(\mathbf{d}, ks)$ | $\mathbf{E}_{\mathbf{d}}[d]$ |
 
 ## Initialization Database
 To securely manage user authentication and facilitate folder access without prior knowledge of the directory structure, the system employs a dedicated initialization database. This database persists essential metadata and a lookup table to verify passwords and retrieve corresponding folder salts during startup.
