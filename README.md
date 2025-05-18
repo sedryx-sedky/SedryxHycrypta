@@ -284,13 +284,13 @@ To implement the key-chaining mechanism described earlier, the following table e
 
 | `id` | `name` | `password_salt` | `file_salt` | `child_salt` | `key1` | `key2` |
 | ---- | ------ | --------------- | ----------- | ----------| ------ | ---- |
-| 42   | $\mathbb{E}_S[\mathrm{folder_name}]$ | $ps$  | $fs$      | $cs$   | $p$  | $d$  |
+| 42   | $\mathbb{E}_S[\mathrm{folder name}]$ | $ps$  | $fs$      | $cs$   | $p$  | $d$  |
 
 
 2. `child_lookup`
 | `hash`                                     | `child_id`     |
-| ------------------------------------------ | -------------- |
-| $\mathrm{hash}(\mathbf{k}, \mathbf{cs})$ | (encrypted ID) |
+| ---------------------- | -------------- |
+| $\mathrm{hash}(\mathbf{k}, \mathbf{cs})$ | $\mathbd{E}_{\mathbf{k}}[\mathrm{child ID}]$ |
 
 3. `key_lookup`
 | `hash`                            | `key`                            |
