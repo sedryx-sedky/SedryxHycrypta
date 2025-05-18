@@ -283,7 +283,7 @@ To implement the key-chaining mechanism described earlier, the following table e
 1. `folder`
 | `id` | `name`                                  | `password_salt` | `file_salt` | `child_salt` | `key1` | `key2` |
 | ---- | --------------------------------------- | --------------- | ----------- | ------------ | ------ | ------ |
-| ...  | $\mathbb{E}_S\[\text{folder\_name}]$ | $ps$          | $fs$      | $cs$       | $p$  | $d$  |
+| ...  | $\mathbb{E}_S\[\mathrm{folder_name}]$ | $ps$          | $fs$      | $cs$       | $p$  | $d$  |
 
 
 2. `child_lookup`
