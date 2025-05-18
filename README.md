@@ -319,8 +319,8 @@ To securely manage user authentication and facilitate folder access without prio
 
 | Column          | Type | Description                                                |
 | --------------- | ---- | ---------------------------------------------------------- |
-| `hash`          | BLOB | Hash of the derived key `r := KDF(password, s)`            |
-| `password_salt` | BLOB | Encrypted folder-specific password salt `\mathbb{E}_r[ps]` |
+| `hash`          | BLOB | Hash of the derived key $r := \mathrm{KDF}(password, s)$            |
+| `password_salt` | BLOB | Encrypted folder-specific password salt $\mathbb{E}_r[ps]$ |
 
 * Maps the hash of the key derived from the user’s input password combined with the global salt to the encrypted folder-specific password salt.
 
