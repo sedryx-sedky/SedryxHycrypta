@@ -288,11 +288,13 @@ To implement the key-chaining mechanism described earlier, the following table e
 
 
 2. `child_lookup`
+
 | `hash`                                     | `child_id`     |
 | ---------------------- | -------------- |
-| $\mathrm{hash}(\mathbf{k}, \mathbf{cs})$ | $\mathbd{E}_{\mathbf{k}}[\mathrm{child ID}]$ |
+| $\mathrm{hash}(\mathbf{k}, \mathbf{cs})$ | $\mathbf{E}_{\mathbf{k}}[\mathrm{child ID}]$ |
 
 3. `key_lookup`
+
 | `hash`                            | `key`                            |
 | --------------------------------- | -------------------------------- |
 | $\mathrm{hash}(p, ks)$          | $\mathbb{E}_p[S]$            |
