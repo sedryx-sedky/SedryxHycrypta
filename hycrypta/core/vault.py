@@ -1,0 +1,2 @@
+class Vault:
+	pass
