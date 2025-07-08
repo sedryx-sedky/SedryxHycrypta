@@ -4,7 +4,7 @@
 
 ---
 
-<p>
+<p align = "center">
   <img src="Peeko.png" alt="Logo" width="200"/>
 </p>
 
