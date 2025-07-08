@@ -4,6 +4,10 @@
 
 ---
 
+<p align="center">
+  <img src="Peeko.png" alt="Logo" width="500"/>
+</p>
+
 ## Abstract
 In this README, I present a cryptographically secure file-management design that assumes an adversary with full access to all stored data. My goal is to describe a coherent model grounded in realistic threat assumptions. This work is an intellectual exercise—emerging from my own exploration of cryptographic techniques—and is not a ready-for-production proposal.
 
