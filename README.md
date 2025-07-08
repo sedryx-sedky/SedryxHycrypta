@@ -5,7 +5,7 @@
 ---
 
 <p>
-  <img src="Peeko.png" alt="Logo" width="500"/>
+  <img src="Peeko.png" alt="Logo" width="200"/>
 </p>
 
 ## Abstract
